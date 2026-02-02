@@ -1,0 +1,58 @@
+name: Build Tailscale Android (Universal)
+
+on:
+  workflow_dispatch: # Tombol manual untuk memicu build
+  push:
+    tags:
+      - 'v*' # Build otomatis jika Anda push tag versi
+
+jobs:
+  build-matrix:
+    name: Build for ${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Daftar arsitektur yang ingin dibuild
+        include:
+          - goarch: arm64
+            goarm: ''      # ARM64 tidak butuh GOARM
+            label: arm64-v8a
+          - goarch: arm
+            goarm: '7'     # Wajib set 7 agar support Android 32-bit umum (ARMv7)
+            label: armeabi-v7a
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          repository: tailscale/tailscale
+          # ref: v1.60.0  <-- Uncomment baris ini jika ingin versi spesifik, jika tidak dia ambil latest
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22' # Sesuaikan dengan go.mod di tailscale
+
+      - name: Build Binary (${{ matrix.goarch }})
+        run: |
+          export CGO_ENABLED=0
+          export GOOS=android
+          export GOARCH=${{ matrix.goarch }}
+          export GOARM=${{ matrix.goarm }}
+          
+          echo "🚀 Building for Android ${{ matrix.label }}..."
+          
+          # Build Daemon
+          go build -trimpath -ldflags="-s -w" -o tailscaled ./cmd/tailscaled
+          
+          # Build CLI
+          go build -trimpath -ldflags="-s -w" -o tailscale ./cmd/tailscale
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          # Nama file zip nanti akan menyertakan arsitekturnya
+          name: tailscale-android-${{ matrix.label }}
+          path: |
+            tailscaled
+            tailscale
