@@ -27,8 +27,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          repository: tailscale/tailscale
-          ref: v1.94.1  # Version
+          repository: anasfanani/tailscale-android-cli
+          #ref: v1.94.1  # Version
           fetch-depth: 0
 
       - name: Setup Go
